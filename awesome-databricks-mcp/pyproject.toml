@@ -1,0 +1,13 @@
+[project]
+name = "databricks-mcp-stdio"
+version = "0.1.0"
+description = "Databricks MCP Server - stdio-only version for direct integration with MCP clients"
+authors = [
+    {name = "Your Name", email = "your.email@databricks.com"},
+]
+dependencies = [
+    "fastmcp>=2.10.6",
+    "databricks-sdk==0.59.0",
+    "pyyaml>=6.0.2",
+]
+requires-python = ">=3.11"

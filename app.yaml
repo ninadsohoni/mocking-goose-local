@@ -1,0 +1,4 @@
+command: [
+  "python",
+  "proxy_app.py"
+]
