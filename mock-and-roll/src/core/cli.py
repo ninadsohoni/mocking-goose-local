@@ -47,21 +47,6 @@ def parse_demo_args(
     
     # Standard demo arguments that map to configuration overrides
     parser.add_argument(
-        "--schema",
-        type=str,
-        help="Override the Databricks schema name"
-    )
-    parser.add_argument(
-        "--catalog",
-        type=str,
-        help="Override the Databricks catalog name"
-    )
-    parser.add_argument(
-        "--volume",
-        type=str,
-        help="Override the Databricks volume name"
-    )
-    parser.add_argument(
         "--records",
         type=int,
         help="Override the number of records to generate"

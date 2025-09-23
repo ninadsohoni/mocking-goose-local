@@ -19,35 +19,9 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class DatabricksConfig:
-    """Databricks connection and storage configuration."""
-    catalog: str
-    schema: str
-    volume: str
-    auto_create_catalog: bool = False
-    auto_create_schema: bool = True
-    auto_create_volume: bool = True
-    
-    def get_volume_path(self, file_path: str = "") -> str:
-        """Get full volume path for storing data."""
-        base_path = f"/Volumes/{self.catalog}/{self.schema}/{self.volume}"
-        if file_path:
-            return f"{base_path}/{file_path.lstrip('/')}"
-        return base_path
-
-
-@dataclass
 class DataGenerationConfig:
     """Data generation parameters."""
     default_records: int
-    date_range_days: int
-    batch_size: int
-
-
-@dataclass
-class StorageConfig:
-    """Storage configuration."""
-    write_mode: str
 
 
 @dataclass
@@ -68,9 +42,7 @@ class AppConfig:
 class Config:
     """Complete configuration object."""
     environment: str
-    databricks: DatabricksConfig
     data_generation: DataGenerationConfig
-    storage: StorageConfig
     logging: LoggingConfig
     app: AppConfig
 
@@ -146,9 +118,6 @@ def apply_cli_overrides(config: Dict[str, Any], cli_overrides: Optional[Dict[str
     
     # Define CLI argument mappings
     cli_mappings = {
-        'catalog': ['databricks', 'catalog'],
-        'schema': ['databricks', 'schema'],
-        'volume': ['databricks', 'volume'],
         'records': ['data_generation', 'default_records'],
         'log_level': ['logging', 'level'],
     }
@@ -166,7 +135,7 @@ def apply_cli_overrides(config: Dict[str, Any], cli_overrides: Optional[Dict[str
             
             # Convert value to appropriate type
             final_key = config_path[-1]
-            if final_key in ['default_records', 'date_range_days', 'batch_size']:
+            if final_key in ['default_records']:
                 current[final_key] = int(cli_value)
             else:
                 current[final_key] = cli_value
@@ -184,12 +153,6 @@ def apply_env_overrides(config: Dict[str, Any]) -> Dict[str, Any]:
     
     # Define environment variable mappings
     env_mappings = {
-        'DATABRICKS_CATALOG': ['databricks', 'catalog'],
-        'DATABRICKS_SCHEMA': ['databricks', 'schema'],
-        'DATABRICKS_VOLUME': ['databricks', 'volume'],
-        'DATABRICKS_AUTO_CREATE_CATALOG': ['databricks', 'auto_create_catalog'],
-        'DATABRICKS_AUTO_CREATE_SCHEMA': ['databricks', 'auto_create_schema'],
-        'DATABRICKS_AUTO_CREATE_VOLUME': ['databricks', 'auto_create_volume'],
         'DATA_RECORDS': ['data_generation', 'default_records'],
         'LOG_LEVEL': ['logging', 'level'],
     }
@@ -207,10 +170,8 @@ def apply_env_overrides(config: Dict[str, Any]) -> Dict[str, Any]:
             
             # Convert value to appropriate type
             final_key = config_path[-1]
-            if final_key in ['default_records', 'date_range_days', 'batch_size']:
+            if final_key in ['default_records']:
                 current[final_key] = int(env_value)
-            elif final_key in ['auto_create_catalog', 'auto_create_schema', 'auto_create_volume']:
-                current[final_key] = env_value.lower() in ('true', '1', 'yes', 'on')
             else:
                 current[final_key] = env_value
             
@@ -295,9 +256,7 @@ def load_config(environment: Optional[str] = None, cli_overrides: Optional[Dict[
     logger.info(f"Configuration loaded successfully")
     return Config(
         environment=environment,
-        databricks=DatabricksConfig(**config_data['databricks']),
         data_generation=DataGenerationConfig(**config_data['data_generation']),
-        storage=StorageConfig(**config_data['storage']),
         logging=LoggingConfig(**config_data['logging']),
         app=AppConfig(**config_data['app'])
     )
