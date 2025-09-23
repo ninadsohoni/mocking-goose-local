@@ -502,7 +502,8 @@ def render_page(host_val: Optional[str], show_iframe: bool) -> str:
     .reset:hover { text-decoration:underline; color:#ff6b6b; }
 
     /* Two-column layout: iframe (left) + samples (right)
-       Use align-items:stretch so right panel matches iframe height automatically. */
+       Stretch both columns to the same height (tallest wins).
+       The iframe wrapper is flex with a MIN height; the iframe fills it. */
     .layout {
       width:100%; max-width:1200px;
       display:flex; align-items:stretch; gap:16px;
@@ -510,15 +511,18 @@ def render_page(host_val: Optional[str], show_iframe: bool) -> str:
 
     .embed-wrap {
       flex:1 1 auto;
+      display:flex; flex-direction:column;           /* allow child iframe to fill */
+      min-height:clamp(520px, 70vh, 900px);          /* baseline; grows to match right panel */
       border-radius:16px; overflow:hidden;
       box-shadow:0 8px 40px rgba(0,0,0,.45);
       border:1px solid #2a345a; background:#0d142b;
       min-width:0; /* prevent overflow in flex */
-      display:block;
     }
     .embed {
       width:100%;
-      height:clamp(520px, 70vh, 900px);  /* reasonable min, responsive mid, capped max */
+      height:auto;                                    /* let it flex-grow instead of fixed height */
+      flex:1 1 auto;                                  /* fill the wrapper’s height */
+      min-height:0;                                   /* avoid flexbox min-content traps */
       border:0; background:#0d142b; display:block;
     }
 
@@ -528,7 +532,6 @@ def render_page(host_val: Optional[str], show_iframe: bool) -> str:
       padding:16px;
       background:#121a32; border-radius:16px;
       border:1px solid #2a345a; box-shadow:0 8px 30px rgba(0,0,0,.35);
-      /* No explicit height — align-items:stretch on parent will match iframe height */
       min-width: 260px;
     }
     .sp-title { margin:0; font-size:1.05rem; }
@@ -538,15 +541,26 @@ def render_page(host_val: Optional[str], show_iframe: bool) -> str:
     @media (max-width: 1100px) {
       .sidepanel.right { flex-basis:300px; }
     }
+
+    /* Mobile / narrow: stack vertically. Make iframe full-width with a sensible height again. */
     @media (max-width: 980px) {
-      .layout { flex-direction:column; align-items:stretch; } /* stack + full width */
+      .layout { flex-direction:column; align-items:stretch; }
       .embed-wrap, .sidepanel.right { width:100%; }
-      .embed { height:clamp(480px, 72vh, 980px); }  /* full-width, good height on mobile */
+
+      .embed-wrap {
+        display:block;              /* stop flex so iframe uses explicit height below */
+        min-height:unset;
+      }
+      .embed {
+        height:clamp(480px, 72vh, 980px);  /* full-width, scroll-friendly height on mobile */
+        flex:none;
+      }
     }
+
     /* Make the sample question headings (the <b> parts) orange */
-        .sidepanel.right .sample-list b {
-        color: #ff8a1f;      /* accessible orange */
-        font-weight: 700;    /* keep them bold */
+    .sidepanel.right .sample-list b {
+      color: #ff8a1f;
+      font-weight: 700;
     }
   </style>
 </head>
