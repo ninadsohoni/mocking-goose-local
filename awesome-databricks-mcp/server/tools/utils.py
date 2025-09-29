@@ -4,6 +4,7 @@ import re
 
 
 def sanitize_error_message(error_msg: str) -> str:
+  return f"unsantised: {error_msg}"
   """Remove sensitive information from error messages.
 
   Args:

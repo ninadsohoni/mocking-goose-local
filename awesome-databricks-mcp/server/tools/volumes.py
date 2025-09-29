@@ -6,6 +6,7 @@ import sys
 from typing import Optional
 
 from databricks.sdk import WorkspaceClient
+from databricks.sdk.service import catalog
 from .utils import sanitize_error_message
 
 
@@ -50,7 +51,7 @@ def load_volume_tools(mcp_server):
                 "catalog_name": catalog_name,
                 "schema_name": schema_name,
                 "name": volume_name,
-                "volume_type": volume_type.upper(),
+                "volume_type": catalog.VolumeType.EXTERNAL if volume_type.upper() == "EXTERNAL" else catalog.VolumeType.MANAGED,
             }
 
             if comment:
@@ -195,14 +196,15 @@ def load_volume_tools(mcp_server):
             return {"success": False, "error": f"Error: {error_msg}"}
 
     @mcp_server.tool()
-    def upload_file_to_volume(
-        volume_path: str, local_file_path: str, overwrite: bool = False
+    def upload_folder_to_volume(
+        volume_path: str, dataset_name: str, local_file_paths: list[str], overwrite: bool = False
     ) -> dict:
-        """Upload a local file to a Unity Catalog volume.
+        """Upload a local folder to a Unity Catalog volume.
 
         Args:
             volume_path: Path within the volume where the file will be stored (e.g., /Volumes/catalog/schema/volume/path/file.txt)
-            local_file_path: Path to the local file to upload
+            dataset_name: Name of the dataset (i.e. subfolder) to upload the files to.
+            local_file_paths: Path to the local files to upload. All files must have the same schema.
             overwrite: Whether to overwrite the file if it already exists
 
         Returns:
@@ -216,19 +218,35 @@ def load_volume_tools(mcp_server):
             )
 
             # Validate local file exists
-            if not os.path.exists(local_file_path):
+            if not all(os.path.exists(local_file_path) for local_file_path in local_file_paths):
                 return {
                     "success": False,
-                    "error": f"Local file not found: {local_file_path}",
+                    "error": f"Local file not found: {local_file_paths}",
                 }
 
+            # Check if all files are CSVs and have the same first line (header)
+            csv_files = [fp for fp in local_file_paths if fp.lower().endswith('.csv')]
+            if len(csv_files) == len(local_file_paths) and len(csv_files) > 1:
+                headers = []
+                for fp in csv_files:
+                    with open(fp, "r", encoding="utf-8") as f:
+                        first_line = f.readline().strip()
+                        headers.append(first_line)
+                if not all(h == headers[0] for h in headers):
+                    return {
+                        "success": False,
+                        "error": "Not all CSV files have the same header/first line.",
+                        "headers": headers,
+                    }
+
             # Read the local file
-            with open(local_file_path, "rb") as f:
-                file_bytes = f.read()
+            for i, file_path in enumerate(local_file_paths):
+                with open(file_path, "rb") as f:
+                    file_bytes = f.read()
+                binary_data = io.BytesIO(file_bytes)
+                w.files.upload(volume_path + "/" + dataset_name + "/" + "part_" + str(i) + "_" + dataset_name + ".csv", binary_data, overwrite=overwrite)
 
             # Upload to volume
-            binary_data = io.BytesIO(file_bytes)
-            w.files.upload(volume_path, binary_data, overwrite=overwrite)
 
             # Get file size for confirmation
             file_size = len(file_bytes)
@@ -236,7 +254,7 @@ def load_volume_tools(mcp_server):
             return {
                 "success": True,
                 "file_path": volume_path,
-                "local_file": local_file_path,
+                "local_file": local_file_paths,
                 "size_bytes": file_size,
                 "overwritten": overwrite,
                 "message": f"File uploaded successfully to {volume_path} ({file_size} bytes)",
@@ -302,6 +320,10 @@ def load_volume_tools(mcp_server):
         Returns:
             Dictionary with file listings or error message
         """
+        return list_volume_files_impl(volume_path, recursive)
+
+
+    def list_volume_files_impl(volume_path: str, recursive: bool = False) -> dict:
         try:
             # Initialize Databricks SDK
             w = WorkspaceClient(
@@ -310,29 +332,29 @@ def load_volume_tools(mcp_server):
             )
 
             # List files in the volume path
-            files = w.files.list(volume_path)
+            files = w.files.list_directory_contents(volume_path)
 
             file_list = []
             directory_list = []
 
             for file_info in files:
-                if file_info.is_dir:
+                if file_info.is_directory:
                     directory_list.append(
                         {
                             "name": file_info.name,
                             "path": file_info.path,
                             "type": "directory",
-                            "modified_at": file_info.modified_at,
+                            "last_modified": file_info.last_modified,
                         }
                     )
                     # If recursive, list contents of subdirectories
                     if recursive:
                         try:
-                            sub_result = list_volume_files(file_info.path, recursive=True)
+                            sub_result = list_volume_files_impl(file_info.path, recursive=True)
                             if sub_result.get("success"):
                                 file_list.extend(sub_result.get("files", []))
                                 directory_list.extend(sub_result.get("directories", []))
-                        except:
+                        except Exception as e:
                             # Skip subdirectories that can't be accessed
                             pass
                 else:
@@ -342,7 +364,7 @@ def load_volume_tools(mcp_server):
                             "path": file_info.path,
                             "type": "file",
                             "size_bytes": file_info.file_size,
-                            "modified_at": file_info.modified_at,
+                            "modified_at": file_info.last_modified,
                         }
                     )
 

@@ -14,6 +14,135 @@ def load_uc_tools(mcp_server):
   """
 
   @mcp_server.tool()
+  def list_uc_catalogs() -> dict:
+    """List all catalogs in the workspace.
+
+    Returns:
+        Dictionary containing list of catalogs with their details
+    """
+    try:
+      # Initialize Databricks SDK
+      w = WorkspaceClient(
+        host=os.environ.get('DATABRICKS_HOST'), token=os.environ.get('DATABRICKS_TOKEN')
+      )
+
+      # List all catalogs
+      catalogs = w.catalogs.list()
+
+      catalog_list = []
+      for catalog in catalogs:
+        catalog_list.append(
+          {
+            'name': catalog.name,
+            'type': catalog.catalog_type,
+            'comment': catalog.comment,
+            'owner': catalog.owner,
+            'created_at': catalog.created_at,
+            'updated_at': catalog.updated_at,
+            'properties': catalog.properties,
+          }
+        )
+
+      return {
+        'success': True,
+        'catalogs': catalog_list,
+        'count': len(catalog_list),
+        'message': f'Found {len(catalog_list)} catalog(s)',
+      }
+
+    except Exception as e:
+      print(f'❌ Error listing catalogs: {str(e)}', file=sys.stderr)
+      return {'success': False, 'error': f'Error: {str(e)}', 'catalogs': [], 'count': 0}
+
+  @mcp_server.tool()
+  def create_uc_catalog(catalog_name: str, comment: str = None, properties: dict = None) -> dict:
+    """Create a new catalog in Unity Catalog.
+
+    Args:
+        catalog_name: Name of the catalog to create
+        comment: Optional comment/description for the catalog
+        properties: Optional dictionary of catalog properties
+
+    Returns:
+        Dictionary with operation result or error message
+    """
+    try:
+      # Initialize Databricks SDK
+      w = WorkspaceClient(
+        host=os.environ.get('DATABRICKS_HOST'), token=os.environ.get('DATABRICKS_TOKEN')
+      )
+
+      # Prepare catalog creation request
+      from databricks.sdk.service.catalog import CreateCatalog
+      
+      create_request = CreateCatalog(
+        name=catalog_name,
+        comment=comment,
+        properties=properties
+      )
+
+      # Create the catalog
+      catalog = w.catalogs.create(create_request)
+
+      return {
+        'success': True,
+        'catalog': {
+          'name': catalog.name,
+          'type': catalog.catalog_type,
+          'comment': catalog.comment,
+          'owner': catalog.owner,
+          'created_at': catalog.created_at,
+          'updated_at': catalog.updated_at,
+          'properties': catalog.properties,
+        },
+        'message': f'Catalog {catalog_name} created successfully',
+      }
+
+    except Exception as e:
+      print(f'❌ Error creating catalog: {str(e)}', file=sys.stderr)
+      return {'success': False, 'error': f'Error: {str(e)}'}
+
+  @mcp_server.tool()
+  def create_uc_schema(catalog_name: str, schema_name: str, comment: str = None, properties: dict = None) -> dict:
+    """Create a new schema in a Unity Catalog catalog.
+
+    Args:
+        catalog_name: Name of the catalog to create schema in
+        schema_name: Name of the schema to create
+        comment: Optional comment/description for the schema
+        properties: Optional dictionary of schema properties
+
+    Returns:
+        Dictionary with operation result or error message
+    """
+    try:
+      # Initialize Databricks SDK
+      w = WorkspaceClient(
+        host=os.environ.get('DATABRICKS_HOST'), token=os.environ.get('DATABRICKS_TOKEN')
+      )
+
+      # Create the schema
+      schema = w.schemas.create(name=schema_name, catalog_name=catalog_name, comment=comment, properties=properties)
+
+      return {
+        'success': True,
+        'schema': {
+          'name': schema.name,
+          'full_name': f'{catalog_name}.{schema.name}',
+          'comment': schema.comment,
+          'owner': schema.owner,
+          'created_at': schema.created_at,
+          'updated_at': schema.updated_at,
+          'properties': schema.properties,
+        },
+        'message': f'Schema {catalog_name}.{schema_name} created successfully',
+      }
+
+    except Exception as e:
+      print(f'❌ Error creating schema: {str(e)}', file=sys.stderr)
+      return {'success': False, 'error': f'Error: {str(e)}'}
+
+  @mcp_server.tool()
   def describe_uc_catalog(catalog_name: str) -> dict:
     """Provide detailed information about a specific catalog.
 
@@ -227,8 +356,7 @@ def load_uc_tools(mcp_server):
             'comment': table.comment,
             'owner': table.owner,
             'created_at': table.created_at,
-            'updated_at': table.updated_at,
-            'properties': table.properties,
+            'updated_at': table.updated_at
           }
         )
 
@@ -309,7 +437,6 @@ def load_uc_tools(mcp_server):
         'owner': table.owner,
         'created_at': table.created_at,
         'updated_at': table.updated_at,
-        'properties': table.properties,
         'columns': columns,
         'partitioning': partitioning,
         'storage_location': table.storage_location if hasattr(table, 'storage_location') else None,
@@ -366,8 +493,7 @@ def load_uc_tools(mcp_server):
             'comment': volume.comment,
             'owner': volume.owner,
             'created_at': volume.created_at,
-            'updated_at': volume.updated_at,
-            'properties': volume.properties,
+            'updated_at': volume.updated_at
           }
         )
 

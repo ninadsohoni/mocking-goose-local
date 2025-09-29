@@ -701,6 +701,3 @@ If you need additional capabilities beyond the core framework:
 
 **CRITICAL**: 
 - For all operations involving interacting with a Databricks workspace, like creating schemas, tables, pipelines and volumes, the tools in awesomedatabricksmcp MUST be used. If a tool does not exist, then give up immediately and inform the user of the missing tool. Do NOT attempt to write a script specifically to cover the tool's gap.
-- Ask for clarification if a user does not specify a schema and catalog name
-- If a pipeline name is needed, ask for clarification if a user does not specify a pipeline name
-- If a dashboard name is needed, ask for clarification if a user does not specify a dashboard name

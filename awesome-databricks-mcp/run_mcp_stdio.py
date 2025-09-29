@@ -41,6 +41,21 @@ def main():
     script_dir = Path(__file__).parent
     os.chdir(script_dir)
     
+    # Allow DATABRICKS_HOST and DATABRICKS_TOKEN to be passed as command-line arguments
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Run MCP server with Databricks credentials.")
+    parser.add_argument('--databricks-host', type=str, help='Databricks workspace URL')
+    parser.add_argument('--databricks-token', type=str, help='Databricks Personal Access Token')
+    args, unknown = parser.parse_known_args()
+
+    # Set environment variables from command-line arguments if provided
+    
+    if args.databricks_host:
+        os.environ['DATABRICKS_HOST'] = args.databricks_host
+    if args.databricks_token:
+        os.environ['DATABRICKS_TOKEN'] = args.databricks_token
+
     # Check for required environment variables
     required_vars = ['DATABRICKS_HOST', 'DATABRICKS_TOKEN']
     missing_vars = [var for var in required_vars if not os.environ.get(var)]
