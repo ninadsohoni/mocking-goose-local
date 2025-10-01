@@ -341,7 +341,7 @@ def render_page(host_val: Optional[str], show_iframe: bool) -> str:
   <div class="header">
     <div class="header-left">
       <div class="logo-wrap">
-        <img class="logo" src="/ui-static/logo.svg" alt="Mocking Goose logo" />
+        <img class="logo" src="/ui-static/logo.png" alt="Mocking Goose logo" />
       </div>
     </div>
     <div class="header-right">
@@ -357,15 +357,31 @@ def render_page(host_val: Optional[str], show_iframe: bool) -> str:
   </div>
 """
 
-    # Right side panel (plain text samples)
+    # Right side panel — formatted sample + bottom-pinned hint
     sidepanel_right = """
   <aside class="sidepanel right" role="complementary" aria-label="Examples">
     <h3 class="sp-title">Try asking:</h3>
-    <ul class="sample-list">
-      <li> <b>Creating demo data </b><br> <i>Hi! Can you please make me a demo for Scentre group? There needs to be data coming from 3 sources in the bronze layer (BigQuery, Salesforce and some other 3rd system) that go through silver and then combine together to form gold tables where I have mall retail space lease data for different Westfield malls. From the gold tables I should be able to derive data on average sqr footage of each space, the revenue per store category and other things like currently vacant spaces.  Please make it in the my_special_goose catalog in a schema called goose_scent.</i></li>
-      <li><b>Creating an LDP Pipeline </b><br> <i>Based on the data and tables in my_special_goose catalog in the schema called goose_scent, could you please build an equivalent ldp pipeline from the bronze tables using the build ldp prompt? You can use a new schema called my_special_goose.goose_scent_ldp . </i></li>
-      <li><b>Creating a Lakeview Dashboard </b><br> <i>Based on the data and tables in my_special_goose catalog in the schema called my_special_goose.goose_scent_ldp, could you please build a lakeview dashboard using the build lakeview dashboard prompt? I would like to see things like average sqr footage of each space, the revenue per store category and other things like number of leases over time or anything else relevant to the data.</i></li>
-    </ul>
+
+    <div class="sp-body">
+      <section class="sample"><i>
+        <p>
+          Hi! Can you please make me a demo of the Databricks platform for
+          <b>Scentre Group</b> using the schema <code>goose_scent</code> in the
+          catalog <code>jeremy_goose_test</code>? From the eventual gold tables,
+          I should be able to derive:
+          average sqr footage of each space, the revenue per store category,
+          and currently vacant spaces. Please include:
+        </p>
+         * Raw data uploaded to a volume, simulating three source systems
+              (<b>BigQuery</b>, <b>Salesforce</b>, and a 3rd system). Limit to at most
+              five raw tables. <br><br>
+         * A <b>Lakeflow</b> declarative pipeline that transforms data through
+              <b>bronze → silver → gold</b> tables.<br><br>
+         * A <b>Lakeview</b> dashboard showing the KPIs (avg sqr footage, revenue by
+              store category, and vacant spaces).<br></i>
+      </section>
+    </div>
+
     <p class="sp-hint">Don't put your laptop to sleep or your session will end! Sessions expire after 1 hour of inactivity or if the tab looses connectivity.</p>
   </aside>
 """
@@ -374,7 +390,7 @@ def render_page(host_val: Optional[str], show_iframe: bool) -> str:
     form_when_inactive = """
   <form class="card" method="POST" action="/start">
     <div class="logo-wrap">
-      <img class="logo" src="/ui-static/logo.svg" alt="Mocking Goose logo" />
+      <img class="logo" src="/ui-static/logo.png" alt="Mocking Goose logo" />
     </div>
     <h2>Welcome to Mocking Goose!</h2>
     <p>Enter your <b>Databricks environment</b> and <b>PAT</b>. We’ll start your per-session Goose and proxy it here — the Goose UI appears below.</p>
@@ -399,7 +415,7 @@ def render_page(host_val: Optional[str], show_iframe: bool) -> str:
 
     <div class="footer">
       <p class="muted">Values stored as <b>HTTP-only cookies</b> on this host. You can clear them via <a href="/logout">/logout</a>.</p>
-      <p class="muted">Powered by <a href="https://github.com/zaxier/mock-and-roll">mock-and-roll</a> , <a href="https://github.com/PulkitXChadha/awesome-databricks-mcp">awesome-databricks-mcp</a> and <a href="https://block.github.io/goose/">Goose</a>. <br>Made by Jeremy Herbert.</p>
+      <p class="muted">Powered by <a href="https://github.com/zaxier/mock-and-roll">mock-and-roll</a> , <a href="https://github.com/PulkitXChadha/awesome-databricks-mcp">awesome-databricks-mcp</a> and <a href="https://block.github.io/goose/">Goose</a>. <br>Created by Jeremy Herbert, Maaz Rahman &amp; Xavier Armitage.</p>
     </div>
   </form>
 """
@@ -457,6 +473,7 @@ def render_page(host_val: Optional[str], show_iframe: bool) -> str:
     h1,h2 { margin:0 0 12px; }
     p { opacity:.85; margin:0 0 16px; line-height:1.4; }
     label { display:block; font-size:.9rem; margin:0 0 8px; opacity:.9; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; background:#0d142b; padding:1px 6px; border-radius:8px; border:1px solid #2a345a; }
     input[type="password"], input[type="url"], input[type="text"] {
       width:100%; padding:12px 14px; border-radius:12px;
       border:1px solid #2a345a; background:#0d142b; color:#e8ecff; outline:none;
@@ -501,9 +518,7 @@ def render_page(host_val: Optional[str], show_iframe: bool) -> str:
     }
     .reset:hover { text-decoration:underline; color:#ff6b6b; }
 
-    /* Two-column layout: iframe (left) + samples (right)
-       Stretch both columns to the same height (tallest wins).
-       The iframe wrapper is flex with a MIN height; the iframe fills it. */
+    /* Two-column layout: iframe (left) + samples (right) */
     .layout {
       width:100%; max-width:1200px;
       display:flex; align-items:stretch; gap:16px;
@@ -511,18 +526,18 @@ def render_page(host_val: Optional[str], show_iframe: bool) -> str:
 
     .embed-wrap {
       flex:1 1 auto;
-      display:flex; flex-direction:column;           /* allow child iframe to fill */
-      min-height:clamp(520px, 70vh, 900px);          /* baseline; grows to match right panel */
+      display:flex; flex-direction:column;
+      min-height:clamp(520px, 70vh, 900px);
       border-radius:16px; overflow:hidden;
       box-shadow:0 8px 40px rgba(0,0,0,.45);
       border:1px solid #2a345a; background:#0d142b;
-      min-width:0; /* prevent overflow in flex */
+      min-width:0;
     }
     .embed {
       width:100%;
-      height:auto;                                    /* let it flex-grow instead of fixed height */
-      flex:1 1 auto;                                  /* fill the wrapper’s height */
-      min-height:0;                                   /* avoid flexbox min-content traps */
+      height:auto;
+      flex:1 1 auto;
+      min-height:0;
       border:0; background:#0d142b; display:block;
     }
 
@@ -532,36 +547,51 @@ def render_page(host_val: Optional[str], show_iframe: bool) -> str:
       padding:16px;
       background:#121a32; border-radius:16px;
       border:1px solid #2a345a; box-shadow:0 8px 30px rgba(0,0,0,.35);
-      min-width: 260px;
+      min-width:260px;
+      max-height:none;   /* let it grow; iframe column will match */
     }
     .sp-title { margin:0; font-size:1.05rem; }
-    .sample-list { list-style:disc; padding-left:22px; margin:6px 0 0; display:grid; gap:8px; }
-    .sp-hint { margin:10px 0 0; font-size:.85rem; opacity:.8; }
+
+    /* New: formatted sample card */
+    .sp-body { flex:1 1 auto; display:grid; gap:12px; }
+    .sample {
+      background:#0f1730;
+      border:1px solid #2a345a;
+      border-radius:12px;
+      padding:12px 14px;
+    }
+    .sample-h {
+      color:#ff8a1f;      /* orange heading */
+      margin:0 0 8px;
+      font-size:1rem;
+      font-weight:700;
+    }
+    .sample-steps {
+      list-style: disc;
+      padding-left:18px;
+      margin:8px 0 0;
+      display:grid; gap:6px;
+    }
+
+    .sp-hint {
+      margin-top:auto;     /* pins this to the bottom of the sidepanel */
+      font-size:.85rem; opacity:.8;
+      border-top:1px dashed #2a345a;
+      padding-top:10px;
+    }
 
     @media (max-width: 1100px) {
       .sidepanel.right { flex-basis:300px; }
     }
-
-    /* Mobile / narrow: stack vertically. Make iframe full-width with a sensible height again. */
     @media (max-width: 980px) {
       .layout { flex-direction:column; align-items:stretch; }
       .embed-wrap, .sidepanel.right { width:100%; }
-
-      .embed-wrap {
-        display:block;              /* stop flex so iframe uses explicit height below */
-        min-height:unset;
-      }
-      .embed {
-        height:clamp(480px, 72vh, 980px);  /* full-width, scroll-friendly height on mobile */
-        flex:none;
-      }
+      .embed-wrap { display:block; min-height:unset; }
+      .embed { height:clamp(480px, 72vh, 980px); flex:none; }
     }
 
-    /* Make the sample question headings (the <b> parts) orange */
-    .sidepanel.right .sample-list b {
-      color: #ff8a1f;
-      font-weight: 700;
-    }
+    /* Legacy: orange <b> in older lists (harmless if unused) */
+    .sidepanel.right .sample-list b { color:#ff8a1f; font-weight:700; }
   </style>
 </head>
 <body>
@@ -652,6 +682,7 @@ __BODY__
         .replace("__BODY__", body_html)
         .replace("__HOST_VAL__", host_val_safe)
     )
+
 
 
 
