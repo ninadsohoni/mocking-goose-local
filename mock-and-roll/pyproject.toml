@@ -5,12 +5,10 @@ build-backend = "hatchling.build"
 [project]
 name = "mock-and-roll"
 version = "0.1.0"
-description = "AI Generated Databricks Demo"
+description = "AI Generated Data Demo Framework"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "databricks-connect==16.4.1",
-    "databricks-dlt>=0.3.0",
     "mimesis>=18.0.0",
     "pandas>=2.2.3",
     "pydantic>=2.11.7",

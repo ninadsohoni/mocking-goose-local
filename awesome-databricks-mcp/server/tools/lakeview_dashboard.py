@@ -16,8 +16,13 @@ import json
 import os
 import sys
 import uuid
+import base64
 from pathlib import Path
 from typing import Any, Dict, List
+
+from databricks.sdk import WorkspaceClient
+from databricks.sdk.service import workspace
+from databricks.sdk.service.dashboards import Dashboard
 
 # Import widget specification creation function
 # Try relative import first (when used as module), fallback to direct import
@@ -1330,6 +1335,53 @@ def load_dashboard_tools(mcp_server):
 
     except Exception as e:
       return {'success': False, 'error': f'Validation failed with error: {str(e)}'}
+
+
+  @mcp_server.tool()
+  def upload_lakeview_dashboard(dashboard_name: str, dashboard_file_path: str) -> Dict[str, Any]:
+    """Upload a Lakeview dashboard to databricks.
+
+    Args:
+        dashboard_name: Name of the dashboard
+        dashboard_file_path: Path to the dashboard file (saved locally)
+    """
+    try:
+      w = WorkspaceClient(
+          host=os.environ.get('DATABRICKS_HOST'), token=os.environ.get('DATABRICKS_TOKEN')
+        )
+
+      # Get the current authenticated user's home folder
+      current_user = w.current_user.me()
+      user_name = current_user.user_name
+      user_home = f"/Workspace/Users/{user_name}"
+
+      with open(dashboard_file_path, 'r') as f:
+        dashboard_file_content = f.read()
+
+      # w.workspace.import_(
+      #   path=f"{user_home}/{dashboard_name}.lvdash.json", 
+      #   content=base64.b64encode(dashboard_file_content.encode()).decode(), 
+      #   format=workspace.ImportFormat.RAW,
+      #   overwrite=False
+      # )
+
+      dashboard_details = w.lakeview.create(
+        Dashboard(
+          display_name=dashboard_name,
+          path=f"{user_home}/{dashboard_name}.lvdash.json",
+          serialized_dashboard=dashboard_file_content
+        )
+      )
+
+      return {
+        'success': True,
+        'dashboard_id': dashboard_details.dashboard_id,
+        "workspace_path": f"{user_home}/{dashboard_name}.lvdash.json",
+        'message': f'Dashboard {dashboard_name} uploaded successfully'
+      }
+    except Exception as e:
+      return {'success': False, 'error': f'Failed to upload dashboard: {str(e)}'}
+
 
   @mcp_server.tool()
   def get_widget_configuration_guide(widget_type: str = None) -> Dict[str, Any]:
