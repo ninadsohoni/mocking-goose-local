@@ -160,7 +160,8 @@ def _locate_goose_bin(workdir: str) -> str:
 def _session_copy_and_sync() -> str:
     """
     Prepare a per-session working directory by copying the local working tree,
-    then run `uv sync` inside that dir. Returns the workdir path.
+    then run `uv python pin 3.13` and `uv sync` inside that dir.
+    Returns the workdir path.
     """
     if not os.path.isdir(LOCAL_REPO_DIR):
         raise RuntimeError(f"Local repo not found: {LOCAL_REPO_DIR}")
@@ -170,17 +171,25 @@ def _session_copy_and_sync() -> str:
         # Replace the empty dir with a copy of the repo (so workdir == repo root)
         shutil.rmtree(workdir, ignore_errors=True)
 
-        # Ignore heavy/irrelevant caches to speed up copy
         ignore = shutil.ignore_patterns(
             ".git", ".venv", "__pycache__", ".mypy_cache", ".pytest_cache",
             ".ruff_cache", ".idea", ".vscode"
         )
-
         shutil.copytree(LOCAL_REPO_DIR, workdir, ignore=ignore)
 
-        # Install the environment for this session
         uv = _locate_uv()
-        subprocess.check_call([uv, "sync"], cwd=workdir, stdout=None, stderr=None)
+
+        # --- Pin a Python that pydantic-core wheels support (avoids building with pyo3) ---
+        # This tells uv to use CPython 3.13 for this project (it will download/manage it if needed).
+        subprocess.check_call([uv, "python", "pin", "3.13"], cwd=workdir)
+
+        # Extra safety: if something still tries to build from source, allow ABI3 forward-compat.
+        env = os.environ.copy()
+        env.setdefault("UV_PYTHON", "3.13")
+        env.setdefault("PYO3_USE_ABI3_FORWARD_COMPATIBILITY", "1")
+
+        # Install deps
+        subprocess.check_call([uv, "sync"], cwd=workdir, env=env)
 
         return workdir
     except Exception as e:
@@ -1002,7 +1011,30 @@ async def absolute_proxy(request: Request, path: str):
             resp.raw_headers.append((k.encode("latin-1"), v.encode("latin-1")))
         return resp
 
+MCP_DIR = "/app/python/source_code/awesome-databricks-mcp"  # adjust if different
 
+def prepare_mcp_env() -> None:
+    """
+    Ensure the awesome-databricks-mcp project uses Python 3.13 and is synced
+    so Goose doesn't try to build pydantic-core for 3.14.
+    Safe to call repeatedly.
+    """
+    if not os.path.isdir(MCP_DIR):
+        return  # silently skip if not present
+
+    uv = _locate_uv()
+
+    env = os.environ.copy()
+    env.setdefault("UV_PYTHON", "3.13")
+    env.setdefault("PYO3_USE_ABI3_FORWARD_COMPATIBILITY", "1")
+
+    try:
+        # Pin & sync once so `uv run --directory ...` uses a 3.13 env
+        subprocess.check_call([uv, "python", "pin", "3.13"], cwd=MCP_DIR, env=env)
+        subprocess.check_call([uv, "sync"], cwd=MCP_DIR, env=env)
+    except subprocess.CalledProcessError as e:
+        # Non-fatal: Goose will still try to run; but likely we want to know.
+        print(f"[warn] MCP env prep failed: {e}")
 
 config_text = """GOOSE_MODEL: databricks-claude-sonnet-4
 extensions:
@@ -1089,5 +1121,9 @@ if __name__ == "__main__":
         """,
         shell=True,
         text=True
-    )    
+    )
+
+    # Prepare the MCP env (pin 3.13 + sync) so the extension won’t compile against 3.14
+    prepare_mcp_env()
+        
     uvicorn.run("proxy_app:app", host=APP_HOST, port=APP_PORT, reload=False)
