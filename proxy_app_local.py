@@ -926,6 +926,7 @@ async def _ws_bridge(websocket: WebSocket, upstream_path: str):
     extra_headers = _ws_forward_headers(websocket, backend.port)
 
     try:
+        print(f"[WebSocket] Connecting to upstream: {target}")
         upstream = await websockets.connect(
             target,
             extra_headers=extra_headers,
@@ -934,7 +935,9 @@ async def _ws_bridge(websocket: WebSocket, upstream_path: str):
             ping_interval=None,
             max_size=None,
         )
-    except Exception:
+        print(f"[WebSocket] Successfully connected to upstream")
+    except Exception as e:
+        print(f"[WebSocket] Failed to connect to upstream: {e}")
         await websocket.close(code=1013)  # Try again later
         return
 
