@@ -929,7 +929,7 @@ async def _ws_bridge(websocket: WebSocket, upstream_path: str):
         print(f"[WebSocket] Connecting to upstream: {target}")
         upstream = await websockets.connect(
             target,
-            extra_headers=extra_headers,
+            additional_headers=extra_headers,  # Fixed: use additional_headers not extra_headers
             subprotocols=offered if offered else None,
             open_timeout=15,
             ping_interval=None,
