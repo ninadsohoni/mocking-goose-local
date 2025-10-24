@@ -904,14 +904,18 @@ async def _ws_bridge(websocket: WebSocket, upstream_path: str):
     # If no live session, close without auto-restarting
     if not token or not host or not has_live_session(host, token):
         # Try to find any active session (for cases where cookies aren't sent with WebSocket)
-        if len(backends) == 1:
-            # If there's exactly one active session, use it
+        # This is safe for local development where typically only one session exists
+        if backends:
+            # Use the first available backend (typically only one in local dev)
             backend = list(backends.values())[0]
+            print(f"[WebSocket] No cookies, using available backend on port {backend.port}")
         else:
+            print(f"[WebSocket] No active sessions found, rejecting connection")
             await websocket.close(code=4401)  # Unauthorized/expired
             return
     else:
         backend = backends[session_key(host, token)]
+        print(f"[WebSocket] Using authenticated backend on port {backend.port}")
 
     # Build upstream ws URL
     target = f"ws://{BACKEND_HOST}:{backend.port}/{upstream_path}"
