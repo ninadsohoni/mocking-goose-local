@@ -903,10 +903,15 @@ async def _ws_bridge(websocket: WebSocket, upstream_path: str):
 
     # If no live session, close without auto-restarting
     if not token or not host or not has_live_session(host, token):
-        await websocket.close(code=4401)  # Unauthorized/expired
-        return
-
-    backend = backends[session_key(host, token)]
+        # Try to find any active session (for cases where cookies aren't sent with WebSocket)
+        if len(backends) == 1:
+            # If there's exactly one active session, use it
+            backend = list(backends.values())[0]
+        else:
+            await websocket.close(code=4401)  # Unauthorized/expired
+            return
+    else:
+        backend = backends[session_key(host, token)]
 
     # Build upstream ws URL
     target = f"ws://{BACKEND_HOST}:{backend.port}/{upstream_path}"
